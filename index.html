@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Master Arena</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* Dark background */
+            color: #c9d1d9; /* Light text */
+        }
+        .arena-card {
+            background-color: #161b22; /* Slightly lighter card background */
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 255, 255, 0.2);
+            border: 1px solid #30363d;
+        }
+        .progress-bar-inner {
+            transition: width 0.5s ease-in-out;
+            background: linear-gradient(90deg, #10b981, #06b6d4); /* Green to Cyan gradient */
+        }
+        .level-up-btn {
+            transition: transform 0.1s;
+        }
+        .level-up-btn:hover {
+            transform: scale(1.05);
+        }
+        .complete-item {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #4c535d;
+        }
+        .ranking-glow {
+            text-shadow: 0 0 5px #06b6d4, 0 0 10px #06b6d4;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(13, 17, 23, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 min-h-screen">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto"></div>
+            <p class="mt-4 text-cyan-400">Loading Arena...</p>
+        </div>
+    </div>
+
+    <!-- Main Header -->
+    <header class="text-center mb-10">
+        <h1 class="text-4xl sm:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400 ranking-glow">
+            Prompt Master Arena
+        </h1>
+        <p class="mt-2 text-xl text-gray-400">The Companion Site for The AI Prompt Playbook</p>
+    </header>
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Column 1: User Progress & Leveling -->
+        <div class="lg:col-span-1 arena-card p-6 flex flex-col space-y-6">
+            <h2 class="text-2xl font-bold border-b border-gray-700 pb-3 text-cyan-400">My Mastery Profile</h2>
+            
+            <div id="user-info">
+                <p class="text-lg font-semibold" id="user-level-display">Level: 1 - Novice</p>
+                <p class="text-sm text-gray-400">XP: <span id="user-xp-display">0</span> / <span id="xp-to-next-level">100</span></p>
+            </div>
+            
+            <p class="text-sm text-gray-400">
+                User ID: <span id="current-user-id" class="font-mono text-xs text-green-400 break-all">Authenticating...</span>
+            </p>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-700 rounded-full h-4">
+                <div id="xp-progress-bar" class="progress-bar-inner h-4 rounded-full" style="width: 0%"></div>
+            </div>
+
+            <p class="text-sm text-gray-400 italic">Complete **C.O.M.P.L.E.T.E.** prompts to earn XP!</p>
+            
+            <!-- Skill Badges -->
+            <h3 class="text-xl font-bold pt-4 border-t border-gray-700 text-green-400">Domain Specialist Badges</h3>
+            <div id="badge-display" class="flex flex-wrap gap-2 text-sm">
+                <!-- Badges will be injected here -->
+                <span id="badge-finance" class="bg-gray-700 text-gray-400 px-3 py-1 rounded-full">Finance (0/5)</span>
+                <span id="badge-legal" class="bg-gray-700 text-gray-400 px-3 py-1 rounded-full">Legal (0/5)</span>
+                <span id="badge-erm" class="bg-gray-700 text-gray-400 px-3 py-1 rounded-full">ERM (0/5)</span>
+            </div>
+            
+            <!-- Monetization Feature Placeholder: Premium Access -->
+            <div class="mt-8 p-4 bg-yellow-900 bg-opacity-30 border border-yellow-500 rounded-lg">
+                <h3 class="text-xl font-bold text-yellow-300">👑 Prompt Pro Access</h3>
+                <p class="text-sm mt-1 text-gray-300">Unlock Master-Level Challenges, Ad-Free Mode, and Private Leaderboards.</p>
+                <button class="level-up-btn w-full mt-3 px-4 py-2 bg-yellow-500 text-gray-900 font-bold rounded-lg hover:bg-yellow-400">Upgrade to Pro</button>
+            </div>
+
+        </div>
+
+        <!-- Column 2: The Arena Challenge (C.O.M.P.L.E.T.E. Checklist) -->
+        <div class="lg:col-span-2 arena-card p-6">
+            <h2 class="text-2xl font-bold border-b border-gray-700 pb-3 text-cyan-400">Arena Challenge: C.O.M.P.L.E.T.E. A Prompt</h2>
+            
+            <p class="mt-4 mb-4 text-gray-300">Input a prompt scenario below, then check off the C.O.M.P.L.E.T.E. criteria you meet to earn experience points.</p>
+
+            <!-- Prompt Input -->
+            <textarea id="prompt-input" rows="4" placeholder="Paste your great, complete prompt here (e.g., 'You are a financial analyst...')" 
+                      class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-cyan-500 focus:border-cyan-500 text-gray-200"></textarea>
+
+            <!-- Domain Selector (Needed for Badge Tracking) -->
+            <select id="domain-selector" class="w-full p-3 mt-4 bg-gray-800 border border-gray-700 rounded-lg text-gray-200 focus:ring-cyan-500 focus:border-cyan-500">
+                <option value="">-- Select Domain for this Challenge --</option>
+                <option value="finance">Finance (Chapter 4)</option>
+                <option value="coding">Programming (Chapter 5)</option>
+                <option value="accounting">Accounting & Auditing (Chapter 6)</option>
+                <option value="legal">Legal (Chapter 7)</option>
+                <option value="erm">Enterprise Risk Management (Chapter 8)</option>
+                <option value="policy">Policy & Regulations (Chapter 9)</option>
+                <option value="general">General/Practice (Chapter 10)</option>
+            </select>
+
+            <!-- C.O.M.P.L.E.T.E. Checklist -->
+            <div id="complete-checklist" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                <!-- C -->
+                <div id="check-C" class="complete-item p-3 bg-gray-700 rounded-lg hover:bg-gray-600">
+                    <input type="checkbox" id="C" class="mr-2 text-green-500 focus:ring-0 rounded">
+                    <label for="C" class="font-semibold text-sm">C: Clarity</label>
+                </div>
+                <!-- O -->
+                <div id="check-O" class="complete-item p-3 bg-gray-700 rounded-lg hover:bg-gray-600">
+                    <input type="checkbox" id="O" class="mr-2 text-green-500 focus:ring-0 rounded">
+                    <label for="O" class="font-semibold text-sm">O: Output Format</label>
+                </div>
+                <!-- M -->
+                <div id="check-M" class="complete-item p-3 bg-gray-700 rounded-lg hover:bg-gray-600">
+                    <input type="checkbox" id="M" class="mr-2 text-green-500 focus:ring-0 rounded">
+                    <label for="M" class="font-semibold text-sm">M: Mode (Role)</label>
+                </div>
+                <!-- P -->
+                <div id="check-P" class="complete-item p-3 bg-gray-700 rounded-lg hover:bg-gray-600">
+                    <input type="checkbox" id="P" class="mr-2 text-green-500 focus:ring-0 rounded">
+                    <label for="P" class="font-semibold text-sm">P: Provide Context</label>
+                </div>
+                <!-- L -->
+                <div id="check-L" class="complete-item p-3 bg-gray-700 rounded-lg hover:bg-gray-600">
+                    <input type="checkbox" id="L" class="mr-2 text-green-500 focus:ring-0 rounded">
+                    <label for="L" class="font-semibold text-sm">L: Limits</label>
+                </div>
+                <!-- E (Examples) -->
+                <div id="check-E" class="complete-item p-3 bg-gray-700 rounded-lg hover:bg-gray-600">
+                    <input type="checkbox" id="E" class="mr-2 text-green-500 focus:ring-0 rounded">
+                    <label for="E" class="font-semibold text-sm">E: Examples</label>
+                </div>
+                <!-- T -->
+                <div id="check-T" class="complete-item p-3 bg-gray-700 rounded-lg hover:bg-gray-600">
+                    <input type="checkbox" id="T" class="mr-2 text-green-500 focus:ring-0 rounded">
+                    <label for="T" class="font-semibold text-sm">T: Think Steps</label>
+                </div>
+                <!-- E (Ethics) -->
+                <div id="check-E2" class="complete-item p-3 bg-gray-700 rounded-lg hover:bg-gray-600">
+                    <input type="checkbox" id="E2" class="mr-2 text-green-500 focus:ring-0 rounded">
+                    <label for="E2" class="font-semibold text-sm">E: Ethics</label>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button id="submit-prompt" class="level-up-btn w-full mt-6 px-6 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-500 text-lg">
+                Submit Prompt & Earn XP
+            </button>
+            
+            <!-- Feedback Message -->
+            <div id="feedback-message" class="mt-4 p-3 rounded-lg text-center font-semibold hidden"></div>
+
+        </div>
+
+        <!-- Column 3: Global Leaderboard & Featured Prompts -->
+        <div class="lg:col-span-3 arena-card p-6 mt-8">
+            <h2 class="text-2xl font-bold border-b border-gray-700 pb-3 text-cyan-400">Prompt Master Rankings</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <!-- Leaderboard -->
+                <div>
+                    <h3 class="text-xl font-bold text-green-400 mb-3">Global Leaderboard (Top 5)</h3>
+                    <ul id="leaderboard" class="space-y-2">
+                        <!-- Leaderboard entries will be dynamically populated by Firebase -->
+                        <li class="text-gray-500">Loading leaderboard...</li>
+                    </ul>
+                </div>
+
+                <!-- Featured Prompts -->
+                <div>
+                    <h3 class="text-xl font-bold text-green-400 mb-3">Today's Featured Prompts (Earn Bonus XP)</h3>
+                    <div id="featured-prompts" class="space-y-3">
+                        <div class="p-3 bg-gray-800 rounded-lg border border-green-500">
+                            <p class="text-sm font-semibold text-green-300">Domain: Legal / Bonus: +50 XP</p>
+                            <p class="text-xs text-gray-400 mt-1">Challenge: Refine a C&D letter to meet ALL 'Limits' criteria.</p>
+                        </div>
+                        <div class="p-3 bg-gray-800 rounded-lg border border-cyan-500">
+                            <p class="text-sm font-semibold text-cyan-300">Domain: Finance / Bonus: +75 XP</p>
+                            <p class="text-xs text-gray-400 mt-1">Challenge: Create a 'Think Steps' prompt for LBO modeling.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript & Firebase Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        setLogLevel('Debug'); // Enable Firestore logging
+
+        // --- Global Config & State ---
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-prompt-master-app';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let db;
+        let auth;
+        let currentUserId = null;
+        let userProfile = null;
+        
+        // --- Game Constants (Read-only) ---
+        const xpThresholds = [100, 300, 700, 1500, 3000, 5000, 8000, 12000, 17000, 25000];
+        const levelNames = ["Novice", "Apprentice", "Journeyman", "Expert", "Prompt Master", "Domain Grandmaster", "AI Architect", "Sentinel", "Oracle", "Legend"];
+        const domainList = ["finance", "coding", "accounting", "legal", "erm", "policy"];
+        const leaderboardCollectionPath = `/artifacts/${appId}/public/data/prompt_masters`;
+
+        // --- DOM Elements ---
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const xpProgress = document.getElementById('xp-progress-bar');
+        const xpDisplay = document.getElementById('user-xp-display');
+        const levelDisplay = document.getElementById('user-level-display');
+        const xpToNextLevel = document.getElementById('xp-to-next-level');
+        const currentUserIdDisplay = document.getElementById('current-user-id');
+        const promptInput = document.getElementById('prompt-input');
+        const submitButton = document.getElementById('submit-prompt');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const checklistDivs = document.querySelectorAll('.complete-item');
+        const leaderboardList = document.getElementById('leaderboard');
+        const domainSelector = document.getElementById('domain-selector');
+
+        // --- Utility Functions ---
+
+        function getLevel(xp) {
+            let level = 1;
+            for (let i = 0; i < xpThresholds.length; i++) {
+                if (xp >= xpThresholds[i]) {
+                    level = i + 2;
+                } else {
+                    break;
+                }
+            }
+            return level;
+        }
+
+        function updateUI() {
+            if (!userProfile) return;
+
+            const xp = userProfile.xp || 0;
+            const level = getLevel(xp);
+            const currentLevelXP = xpThresholds[level - 2] || 0;
+            const nextLevelXP = xpThresholds[level - 1] || xp + 100; // Handle max level
+            
+            const xpNeeded = nextLevelXP - currentLevelXP;
+            const progressXP = xp - currentLevelXP;
+            const percentage = (progressXP / xpNeeded) * 100;
+
+            xpProgress.style.width = `${Math.min(percentage, 100)}%`;
+            xpDisplay.textContent = xp.toLocaleString();
+            xpToNextLevel.textContent = nextLevelXP.toLocaleString();
+            levelDisplay.textContent = `Level: ${level} - ${levelNames[level - 1]}`;
+
+            // Update Badges
+            domainList.forEach(domain => {
+                const count = userProfile.badges?.[domain] || 0;
+                const badgeElement = document.getElementById(`badge-${domain}`);
+                if (badgeElement) {
+                     badgeElement.textContent = `${domain.toUpperCase()} (${count}/5)`;
+                     if (count >= 5) {
+                         badgeElement.classList.add('bg-cyan-600', 'text-white');
+                         badgeElement.classList.remove('bg-gray-700', 'text-gray-400');
+                     }
+                }
+            });
+        }
+
+        function showFeedback(message, type = 'success') {
+            feedbackMessage.textContent = message;
+            feedbackMessage.classList.remove('hidden', 'bg-red-900', 'bg-yellow-900', 'bg-green-800', 'text-red-300', 'text-yellow-300', 'text-green-300', 'bg-gray-800', 'text-gray-300');
+            
+            if (type === 'success') {
+                feedbackMessage.classList.add('bg-green-800', 'bg-opacity-50', 'text-green-300');
+            } else if (type === 'warning') {
+                feedbackMessage.classList.add('bg-yellow-900', 'bg-opacity-50', 'text-yellow-300');
+            } else if (type === 'error') {
+                feedbackMessage.classList.add('bg-red-900', 'bg-opacity-50', 'text-red-300');
+            }
+        }
+
+        // --- Firestore Listeners ---
+
+        function listenToUserProfile() {
+            if (!db || !currentUserId) return;
+            const userDocRef = doc(db, leaderboardCollectionPath, currentUserId);
+
+            onSnapshot(userDocRef, (docSnap) => {
+                const oldLevel = getLevel(userProfile?.xp || 0);
+
+                if (docSnap.exists()) {
+                    userProfile = docSnap.data();
+                } else {
+                    // Create initial profile if it doesn't exist
+                    userProfile = { name: `Master_${currentUserId.substring(0, 8)}`, xp: 0, level: 1, badges: {} };
+                    setDoc(userDocRef, userProfile); 
+                }
+                
+                const newLevel = getLevel(userProfile.xp);
+                updateUI();
+                loadingOverlay.classList.add('hidden');
+
+                if (newLevel > oldLevel) {
+                    showFeedback(`🎉 LEVEL UP! You are now a ${levelNames[newLevel - 1]}!`, 'success');
+                }
+            }, (error) => {
+                console.error("Error listening to user profile:", error);
+                showFeedback("Error loading profile. Check console for details.", 'error');
+            });
+        }
+
+        function listenToLeaderboard() {
+            if (!db) return;
+            const leaderboardQuery = query(
+                collection(db, leaderboardCollectionPath),
+                orderBy("xp", "desc"),
+                limit(5)
+            );
+
+            onSnapshot(leaderboardQuery, (querySnapshot) => {
+                const data = [];
+                querySnapshot.forEach((doc) => {
+                    data.push(doc.data());
+                });
+                renderLeaderboard(data);
+            }, (error) => {
+                console.error("Error listening to leaderboard:", error);
+                leaderboardList.innerHTML = `<li class="text-red-400">Error loading rankings.</li>`;
+            });
+        }
+
+        function renderLeaderboard(data) {
+            leaderboardList.innerHTML = ''; // Clear existing list
+            
+            data.forEach((user, index) => {
+                const rank = index + 1;
+                const isCurrentUser = user.id === currentUserId;
+                const isTop = rank === 1;
+                
+                const listItem = `
+                    <li class="p-2 bg-gray-800 rounded-lg flex justify-between items-center ${isTop ? 'ranking-glow' : ''} ${isCurrentUser ? 'border border-cyan-400' : ''}">
+                        <span class="font-bold ${isTop ? 'text-cyan-300' : 'text-gray-300'}">${rank}. ${user.name}</span>
+                        <span class="${isTop ? 'text-green-400' : 'text-gray-400'}">${user.xp.toLocaleString()} XP</span>
+                    </li>
+                `;
+                leaderboardList.innerHTML += listItem;
+            });
+        }
+
+        // --- Submission Logic ---
+
+        async function saveUserProgress(xpEarned, domainCompleted) {
+            if (!db || !currentUserId || !userProfile) return;
+
+            const userDocRef = doc(db, leaderboardCollectionPath, currentUserId);
+            const currentXP = userProfile.xp || 0;
+            const newXP = currentXP + xpEarned;
+            
+            const updates = {
+                xp: newXP,
+                name: userProfile.name, // Preserve name
+                id: currentUserId,      // Add ID for query filter/ranking
+                updatedAt: new Date().toISOString()
+            };
+
+            // Update Badge count
+            if (domainCompleted && domainList.includes(domainCompleted)) {
+                const currentCount = userProfile.badges?.[domainCompleted] || 0;
+                updates[`badges.${domainCompleted}`] = currentCount + 1;
+            }
+
+            try {
+                await setDoc(userDocRef, updates, { merge: true });
+                // Note: UI update is handled automatically by the onSnapshot listener.
+            } catch (e) {
+                console.error("Error updating document:", e);
+                showFeedback("Error saving progress. Try again later.", 'error');
+            }
+        }
+
+        submitButton.addEventListener('click', async () => {
+            if (!currentUserId) {
+                showFeedback("Please wait for authentication to complete.", 'warning');
+                return;
+            }
+
+            const promptText = promptInput.value.trim();
+            const domainCompleted = domainSelector.value;
+            const checkboxes = Array.from(document.querySelectorAll('#complete-checklist input[type="checkbox"]'));
+            const checkedCount = checkboxes.filter(cb => cb.checked).length;
+            const totalCriteria = 8;
+            let xpEarned = 0;
+            
+            // 1. Validation (Minimum length & Domain selection)
+            if (promptText.length < 50) {
+                showFeedback("Prompt is too short. Please provide a substantive scenario (requires 50+ characters).", 'warning');
+                return;
+            }
+            if (!domainCompleted) {
+                 showFeedback("Please select the Domain for this challenge.", 'warning');
+                 return;
+            }
+
+            // 2. XP Calculation
+            xpEarned = checkedCount * 25; // 25 XP per met criteria
+            let domainBadgeUnlocked = false;
+
+            // Bonus for C.O.M.P.L.E.T.E. Master
+            if (checkedCount === totalCriteria) {
+                xpEarned += 100; 
+                showFeedback(`✨ MASTER BONUS! You created a C.O.M.P.L.E.T.E. prompt and earned ${xpEarned} XP!`, 'success');
+            } else if (checkedCount >= 6) {
+                showFeedback(`🔥 Expert! You met ${checkedCount}/${totalCriteria} criteria and earned ${xpEarned} XP! Keep refining!`, 'warning');
+            } else {
+                showFeedback(`Good start! You met ${checkedCount}/${totalCriteria} criteria and earned ${xpEarned} XP. Review the checklist.`, 'default');
+            }
+            
+            // 3. Save Progress
+            await saveUserProgress(xpEarned, domainCompleted);
+
+            // 4. Reset Challenge (UI reset is handled locally)
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+                cb.closest('.complete-item').classList.remove('bg-green-800');
+                cb.closest('.complete-item').classList.add('bg-gray-700');
+            });
+            promptInput.value = '';
+            domainSelector.value = '';
+        });
+        
+        // Checklist click visual toggle
+        checklistDivs.forEach(div => {
+            div.addEventListener('click', () => {
+                const checkbox = div.querySelector('input[type="checkbox"]');
+                // Use setTimeout to ensure the click listener finishes before the change listener is evaluated
+                setTimeout(() => {
+                    checkbox.checked = !checkbox.checked;
+                    div.classList.toggle('bg-green-800', checkbox.checked);
+                    div.classList.toggle('bg-gray-700', !checkbox.checked);
+                }, 0);
+            });
+        });
+
+        // --- Firebase Initialization and Auth ---
+
+        async function initFirebase() {
+            try {
+                if (Object.keys(firebaseConfig).length === 0) {
+                    console.warn("Firebase config is missing. App will run in non-persistent mode.");
+                    loadingOverlay.classList.add('hidden');
+                    return;
+                }
+                
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // Sign in logic
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        currentUserIdDisplay.textContent = currentUserId;
+                        
+                        listenToUserProfile();
+                        listenToLeaderboard();
+                        submitButton.disabled = false;
+                    } else {
+                        currentUserIdDisplay.textContent = "Sign in failed.";
+                        loadingOverlay.classList.add('hidden');
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization or authentication error:", error);
+                currentUserIdDisplay.textContent = `Error: ${error.code}`;
+                loadingOverlay.classList.add('hidden');
+                submitButton.disabled = true;
+            }
+        }
+
+        initFirebase();
+    </script>
+</body>
+</html>
