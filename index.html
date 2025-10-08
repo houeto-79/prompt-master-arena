@@ -224,19 +224,19 @@
 
         setLogLevel('Debug'); // Enable Firestore logging
 
-        // --- Global Config & State (HARDCODED FOR FIREBASE HOSTING) ---
-        // Configuration provided by the user for the 'prompt-master-arena' project.
-        const firebaseConfig = {
+        // --- Minimal Firebase Config (The Fix) ---
+        // DEFINITIVE FIX: Moving the config to the top of the module to resolve declaration and configuration-not-found issues.
+        const firebaseAppConfig = {
             apiKey: "AIzaSyDRhDx1Cr1EzZTTFC-HEZJAscZc818vG9k",
             authDomain: "prompt-master-arena.firebaseapp.com",
             projectId: "prompt-master-arena",
-            storageBucket: "prompt-master-arena.firebasestorage.app",
-            messagingSenderId: "443928707003",
-            appId: "1:443928707003:web:492242048a41f8fae9ce9e",
-            measurementId: "G-VR46CM52BY"
+            // storageBucket is optional for Auth/Firestore setup, but often included
+            storageBucket: "prompt-master-arena.firebasestorage.app", 
+            // appId is essential for AUTH initialization
+            appId: "1:443928707003:web:492242048a41f8fae9ce9e", 
         };
-        
-        const appId = firebaseConfig.projectId; // Use projectId as the application identifier
+
+        const appId = firebaseAppConfig.projectId; // Use projectId as the application identifier
         let db;
         let auth;
         let currentUserId = null;
@@ -498,14 +498,15 @@
 
         async function initFirebase() {
             try {
-                if (Object.keys(firebaseConfig).length === 0) {
-                    // This should not happen with the hardcoded config, but kept for robustness
-                    console.error("Firebase config is missing.");
+                // Ensure Firebase config is valid before passing it to initializeApp
+                if (Object.keys(firebaseAppConfig).length === 0 || !firebaseAppConfig.apiKey) {
+                    console.error("Firebase config is invalid or missing required API key.");
+                    currentUserIdDisplay.textContent = "Error: Invalid Config";
                     loadingOverlay.classList.add('hidden');
                     return;
                 }
                 
-                const app = initializeApp(firebaseConfig);
+                const app = initializeApp(firebaseAppConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
@@ -527,13 +528,15 @@
                 });
 
             } catch (error) {
+                // Log the precise error code to the UI for better debugging
                 console.error("Firebase initialization or authentication error:", error);
-                currentUserIdDisplay.textContent = `Error: ${error.code}`;
+                currentUserIdDisplay.textContent = `Error: ${error.code || 'UNKNOWN_AUTH_ERROR'}`;
                 loadingOverlay.classList.add('hidden');
                 submitButton.disabled = true;
             }
         }
 
+        // --- Start Initialization ---
         initFirebase();
     </script>
 </body>
