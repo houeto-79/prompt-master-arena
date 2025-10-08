@@ -92,7 +92,7 @@
             <!-- Skill Badges -->
             <h3 class="text-xl font-bold pt-4 border-t border-gray-700 text-green-400">Domain Specialist Badges</h3>
             <div id="badge-display" class="flex flex-wrap gap-2 text-sm">
-                <!-- Badges will be injected here -->
+                <!-- Badges will be dynamically updated by JS -->
                 <span id="badge-finance" class="bg-gray-700 text-gray-400 px-3 py-1 rounded-full">Finance (0/5)</span>
                 <span id="badge-legal" class="bg-gray-700 text-gray-400 px-3 py-1 rounded-full">Legal (0/5)</span>
                 <span id="badge-erm" class="bg-gray-700 text-gray-400 px-3 py-1 rounded-full">ERM (0/5)</span>
@@ -218,17 +218,25 @@
     <!-- JavaScript & Firebase Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         setLogLevel('Debug'); // Enable Firestore logging
 
-        // --- Global Config & State ---
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-prompt-master-app';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // --- Global Config & State (HARDCODED FOR FIREBASE HOSTING) ---
+        // Configuration provided by the user for the 'prompt-master-arena' project.
+        const firebaseConfig = {
+            apiKey: "AIzaSyDRhDx1Cr1EzZTTFC-HEZJAscZc818vG9k",
+            authDomain: "prompt-master-arena.firebaseapp.com",
+            projectId: "prompt-master-arena",
+            storageBucket: "prompt-master-arena.firebasestorage.app",
+            messagingSenderId: "443928707003",
+            appId: "1:443928707003:web:492242048a41f8fae9ce9e",
+            measurementId: "G-VR46CM52BY"
+        };
         
+        const appId = firebaseConfig.projectId; // Use projectId as the application identifier
         let db;
         let auth;
         let currentUserId = null;
@@ -238,6 +246,7 @@
         const xpThresholds = [100, 300, 700, 1500, 3000, 5000, 8000, 12000, 17000, 25000];
         const levelNames = ["Novice", "Apprentice", "Journeyman", "Expert", "Prompt Master", "Domain Grandmaster", "AI Architect", "Sentinel", "Oracle", "Legend"];
         const domainList = ["finance", "coding", "accounting", "legal", "erm", "policy"];
+        // Using the recommended public path for Firestore data
         const leaderboardCollectionPath = `/artifacts/${appId}/public/data/prompt_masters`;
 
         // --- DOM Elements ---
@@ -274,7 +283,7 @@
             const xp = userProfile.xp || 0;
             const level = getLevel(xp);
             const currentLevelXP = xpThresholds[level - 2] || 0;
-            const nextLevelXP = xpThresholds[level - 1] || xp + 100; // Handle max level
+            const nextLevelXP = xpThresholds[level - 1] || xp + 100; // Handle max level (if XP > max threshold)
             
             const xpNeeded = nextLevelXP - currentLevelXP;
             const progressXP = xp - currentLevelXP;
@@ -294,6 +303,10 @@
                      if (count >= 5) {
                          badgeElement.classList.add('bg-cyan-600', 'text-white');
                          badgeElement.classList.remove('bg-gray-700', 'text-gray-400');
+                     } else {
+                         // Reset styling if progress falls below threshold (e.g., in a complex system)
+                         badgeElement.classList.add('bg-gray-700', 'text-gray-400');
+                         badgeElement.classList.remove('bg-cyan-600', 'text-white');
                      }
                 }
             });
@@ -301,7 +314,7 @@
 
         function showFeedback(message, type = 'success') {
             feedbackMessage.textContent = message;
-            feedbackMessage.classList.remove('hidden', 'bg-red-900', 'bg-yellow-900', 'bg-green-800', 'text-red-300', 'text-yellow-300', 'text-green-300', 'bg-gray-800', 'text-gray-300');
+            feedbackMessage.classList.remove('hidden', 'bg-red-900', 'bg-yellow-900', 'bg-green-800', 'text-red-300', 'text-yellow-300', 'text-green-300', 'bg-gray-800', 'text-gray-300', 'bg-opacity-50');
             
             if (type === 'success') {
                 feedbackMessage.classList.add('bg-green-800', 'bg-opacity-50', 'text-green-300');
@@ -309,6 +322,8 @@
                 feedbackMessage.classList.add('bg-yellow-900', 'bg-opacity-50', 'text-yellow-300');
             } else if (type === 'error') {
                 feedbackMessage.classList.add('bg-red-900', 'bg-opacity-50', 'text-red-300');
+            } else {
+                feedbackMessage.classList.add('bg-gray-800', 'bg-opacity-50', 'text-gray-300');
             }
         }
 
@@ -316,6 +331,7 @@
 
         function listenToUserProfile() {
             if (!db || !currentUserId) return;
+            // The document ID is the userId
             const userDocRef = doc(db, leaderboardCollectionPath, currentUserId);
 
             onSnapshot(userDocRef, (docSnap) => {
@@ -325,7 +341,7 @@
                     userProfile = docSnap.data();
                 } else {
                     // Create initial profile if it doesn't exist
-                    userProfile = { name: `Master_${currentUserId.substring(0, 8)}`, xp: 0, level: 1, badges: {} };
+                    userProfile = { name: `Master_${currentUserId.substring(0, 8)}`, xp: 0, level: 1, badges: {}, id: currentUserId };
                     setDoc(userDocRef, userProfile); 
                 }
                 
@@ -333,6 +349,7 @@
                 updateUI();
                 loadingOverlay.classList.add('hidden');
 
+                // Check for level up after profile update
                 if (newLevel > oldLevel) {
                     showFeedback(`🎉 LEVEL UP! You are now a ${levelNames[newLevel - 1]}!`, 'success');
                 }
@@ -358,13 +375,18 @@
                 renderLeaderboard(data);
             }, (error) => {
                 console.error("Error listening to leaderboard:", error);
-                leaderboardList.innerHTML = `<li class="text-red-400">Error loading rankings.</li>`;
+                leaderboardList.innerHTML = `<li class="text-red-400 p-2">Error loading rankings.</li>`;
             });
         }
 
         function renderLeaderboard(data) {
             leaderboardList.innerHTML = ''; // Clear existing list
             
+            if (data.length === 0) {
+                 leaderboardList.innerHTML = `<li class="text-gray-500 p-2">No masters ranked yet!</li>`;
+                 return;
+            }
+
             data.forEach((user, index) => {
                 const rank = index + 1;
                 const isCurrentUser = user.id === currentUserId;
@@ -404,10 +426,9 @@
 
             try {
                 await setDoc(userDocRef, updates, { merge: true });
-                // Note: UI update is handled automatically by the onSnapshot listener.
             } catch (e) {
                 console.error("Error updating document:", e);
-                showFeedback("Error saving progress. Try again later.", 'error');
+                showFeedback("Error saving progress. Check console for details.", 'error');
             }
         }
 
@@ -436,7 +457,6 @@
 
             // 2. XP Calculation
             xpEarned = checkedCount * 25; // 25 XP per met criteria
-            let domainBadgeUnlocked = false;
 
             // Bonus for C.O.M.P.L.E.T.E. Master
             if (checkedCount === totalCriteria) {
@@ -479,7 +499,8 @@
         async function initFirebase() {
             try {
                 if (Object.keys(firebaseConfig).length === 0) {
-                    console.warn("Firebase config is missing. App will run in non-persistent mode.");
+                    // This should not happen with the hardcoded config, but kept for robustness
+                    console.error("Firebase config is missing.");
                     loadingOverlay.classList.add('hidden');
                     return;
                 }
@@ -488,12 +509,8 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                // Sign in logic
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                // Sign in logic: Use anonymous sign-in for public access
+                await signInAnonymously(auth); 
 
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
